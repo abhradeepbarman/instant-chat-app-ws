@@ -3,15 +3,14 @@ import WebSocket, { WebSocketServer } from "ws";
 const wss = new WebSocketServer({ port: 8080 });
 
 interface ChatSocket {
-    socket: WebSocket;
-    roomId: string;
+    [roomId: string]: WebSocket[];
 }
 
-let chatSockets: ChatSocket[] = [];
-// [{
-//     socket,
-//     roomId
-// }]
+let chatSockets: ChatSocket = {};
+// {
+//     roomId: [socket1, socket2],
+//     roomId: [socket3, socket4],
+// }
 
 wss.on("connection", function connection(socket) {
     console.log("user connected");
@@ -19,44 +18,98 @@ wss.on("connection", function connection(socket) {
     socket.on("message", (data) => {
         const { type, payload } = JSON.parse(data.toString());
 
+        if (type === "create") {
+            const { roomId } = payload;
+
+            // check if the roomID exists
+            if (roomId in chatSockets) {
+                socket.send(
+                    JSON.stringify({
+                        type: "error",
+                        payload: { message: "Room ID already exists" },
+                    })
+                );
+                return;
+            }
+
+            chatSockets[roomId] = [];
+        }
+
         if (type === "join") {
             const { roomId } = payload;
 
-            // delete all previous chatSockets
-            chatSockets = chatSockets.filter((cs) => cs.socket !== socket);
+            // delete all previous connection
+            Object.keys(chatSockets).forEach((roomId) => {
+                chatSockets[roomId] = chatSockets[roomId].filter(
+                    (cs) => cs !== socket
+                );
+            });
 
             // connect new chat socket
-            chatSockets.push({
-                socket,
-                roomId,
-            });
+            if (chatSockets[roomId]) {
+                chatSockets[roomId].push(socket);
+            } else {
+                chatSockets[roomId] = [socket];
+            }
+
+            // send user count
+            chatSockets[roomId]?.map((sc) =>
+                sc.send(
+                    JSON.stringify({
+                        type: "count",
+                        payload: {
+                            count: chatSockets[roomId].length,
+                        },
+                    })
+                )
+            );
         }
 
         if (type === "message") {
-            const { message, name } = payload;
-
-            // get roomID
-            const chatSocket = chatSockets.find((cs) => cs.socket === socket);
-            const roomID = chatSocket?.roomId;
+            const { message, name, roomId } = payload;
 
             // send Message to all other connected chat sockets except myself
-            chatSockets
-                ?.filter(
-                    (cs) =>
-                        cs.roomId === roomID && cs.socket !== chatSocket?.socket
-                )
-                ?.forEach((cs) =>
-                    cs.socket.send(
-                        JSON.stringify({
-                            type: "message",
-                            payload: { message, name },
-                        })
-                    )
-                );
+            chatSockets[roomId]?.forEach((cs) =>
+                cs === socket
+                    ? null
+                    : cs.send(
+                          JSON.stringify({
+                              type: "message",
+                              payload: { message, name },
+                          })
+                      )
+            );
         }
     });
 
     socket.on("close", () => {
-        chatSockets = chatSockets.filter((cs) => cs.socket !== socket);
+        // remove chat socket
+        let userRoomId;
+        Object.keys(chatSockets).forEach((roomId) => {
+            chatSockets[roomId] = chatSockets[roomId].filter(
+                (cs) => cs !== socket
+            );
+            userRoomId = roomId;
+        });
+
+        // room id deleted if no user
+        if(chatSockets[userRoomId!].length === 0) {
+            delete chatSockets[userRoomId!]
+            return;
+        }
+
+        // send user count
+        chatSockets[userRoomId!]?.map((sc) =>
+            sc.send(
+                JSON.stringify({
+                    type: "count",
+                    payload: {
+                        count: chatSockets[userRoomId!].length,
+                    },
+                })
+            )
+        );
+
+        console.log("user disconnected");
     });
 });

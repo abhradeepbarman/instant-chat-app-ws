@@ -20,6 +20,7 @@ function App() {
     const [chatWindow, setChatWindow] = useState<boolean | undefined>(false);
     const [message, setMessage] = useState<string | undefined>();
     const [messages, setMessages] = useState<ChatMessageType[]>([]);
+    const [userCount, setUserCount] = useState<number | undefined>(0);
 
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080");
@@ -36,11 +37,27 @@ function App() {
                     },
                 ]);
             }
+
+            if (type === "error") {
+                toast.error(payload.message);
+            }
+
+            if (type === "count") {
+                const { payload } = JSON.parse(e.data);
+                setUserCount(payload.count);
+            }
         };
     }, []);
 
     const createRoom = () => {
-        setNewRoom(nanoid(6));
+        const newRoomId = nanoid(6);
+        setNewRoom(newRoomId);
+        socket?.send(
+            JSON.stringify({
+                type: "create",
+                payload: { roomId: newRoomId },
+            })
+        );
     };
 
     const copyRoomId = () => {
@@ -73,7 +90,7 @@ function App() {
         socket?.send(
             JSON.stringify({
                 type: "message",
-                payload: { message, name },
+                payload: { message, name, roomId },
             })
         );
         setMessages((prev) => [
@@ -144,7 +161,7 @@ function App() {
                                 </span>
                             </div>
 
-                            <div>Users:</div>
+                            <div>Users:{userCount}</div>
                         </div>
 
                         <ScrollArea className="w-full mt-2 flex-auto h-[400px] border-2 rounded-xl px-5 py-2">
