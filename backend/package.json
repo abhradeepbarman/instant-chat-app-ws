@@ -8,7 +8,7 @@
         "tsx": "^4.19.3"
     },
     "peerDependencies": {
-        "typescript": "^5"
+        "typescript": "^5.8.2"
     },
     "scripts": {
         "dev": "tsx watch src/index.ts",
