@@ -1,0 +1,21 @@
+{
+    "name": "backend",
+    "module": "index.ts",
+    "type": "module",
+    "private": true,
+    "devDependencies": {
+        "@types/bun": "latest",
+        "tsx": "^4.19.3"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "start": "tsc && node dist/index.js",
+        "build": "tsc"
+    },
+    "dependencies": {
+        "ws": "^8.18.1"
+    }
+}
