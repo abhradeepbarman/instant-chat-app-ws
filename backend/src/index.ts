@@ -1,6 +1,7 @@
 import WebSocket, { WebSocketServer } from "ws";
+import "dotenv/config";
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: Number(process.env.PORT) || 8080 });
 
 interface ChatSocket {
     [roomId: string]: WebSocket[];
@@ -93,8 +94,8 @@ wss.on("connection", function connection(socket) {
         });
 
         // room id deleted if no user
-        if(chatSockets[userRoomId!].length === 0) {
-            delete chatSockets[userRoomId!]
+        if (chatSockets[userRoomId!].length === 0) {
+            delete chatSockets[userRoomId!];
             return;
         }
 

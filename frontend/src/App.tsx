@@ -23,7 +23,7 @@ function App() {
     const [userCount, setUserCount] = useState<number | undefined>(0);
 
     useEffect(() => {
-        const ws = new WebSocket("ws://localhost:8080");
+        const ws = new WebSocket(import.meta.env.BACKEND_URL);
         setSocket(ws);
 
         ws.onmessage = (e) => {
